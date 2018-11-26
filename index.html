@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>New Hacker Tab</title>
+		<link rel="stylesheet" href="css/spectre.min.css">
+		<link rel="stylesheet" href="css/spectre-exp.min.css">
+		<link rel="stylesheet" href="css/spectre-icons.min.css">
+		<style type="text/css" media="screen">
+#change-view {
+	display:none;
+}
+#editor-button {
+	position: absolute;
+	bottom: 10px;
+	right: 10px;
+	z-index: 10;
+}
+#editor {
+	position: absolute;
+	top: 56px;
+	right: 0px;
+	bottom: 0px;
+	left: 0px;
+}
+.navbar {
+	padding: 10px;
+}
+		</style>
+	</head>
+	<body>
+		<div id="content-view">
+			<button id="editor-button" class="btn btn-action s-circle" onclick="toggle()"><i class="icon icon-edit"></i></button>
+			<div id="content"></div>
+		</div>
+		<div id="change-view">
+			<header class="navbar">
+				<section class="navbar-section">
+					<a href="https://www.new-hacker-tab.com" class="navbar-brand mr-2">New-Hacker-Tab.com</a>
+				</section>
+				<section class="navbar-center">
+					<!-- centered logo or brand -->
+				</section>
+				<section class="navbar-section">
+					<label class="form-switch">
+						<input type="checkbox" id="vim-checkbox" onChange="toggleKeys()">
+						<i class="form-icon"></i> Vim Keys
+					</label>
+					<div class="btn-group btn-group-block">
+						<a href="#" class="btn" onclick="importFile()">Import</a>
+						<a href="#" class="btn" onclick="exportFile()">Export</a>
+					</div>
+					<a href="#" class="btn btn-link" onclick="reset()">Reset</a>
+					<div class="btn-group btn-group-block">
+						<a href="#" class="btn" onclick="cancel()">Cancel</a>
+						<a href="#" class="btn active" onclick="save()">Save</a>
+					</div>
+				</section>
+			</header>
+			<div id="editor"></div>
+		</div>
+		<a id="hiddenDownloadHelper" style="display:none;"></a>
+
+		<script src="js/jquery-3.3.1.min.js"></script>
+		<script src="js/localforage.min.js"></script>
+		<script src="js/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+		<script>
+// NOTE: using a base64 string here to avoid conflicts with script tags
+var defaultStr='eyJjb2RlIjoiPHN0eWxlPlxuICAgIGJvZHkge1xuICAgICAgICBiYWNrZ3JvdW5kOiAjMzAzNzQyO1xuICAgICAgICBiYWNrZ3JvdW5kOiAjZjhmOGY4O1xuICAgIH1cbiAgICAjY29udGVudCB7XG4gICAgICAgIG1hcmdpbjogMTBweDtcbiAgICB9XG4gICAgLmNvbnRhaW5lciB7XG4gICAgICAgIHRleHQtYWxpZ246IGxlZnQ7XG4gICAgfVxuICAgIC5maXJzdC1yb3cge1xuICAgICAgICBtaW4taGVpZ2h0OiAyMzVweDtcbiAgICB9XG48L3N0eWxlPlxuPGRpdiBjbGFzcz1cImNvbnRhaW5lclwiPlxuICAgIDxkaXYgY2xhc3M9XCJjb2x1bW5zXCI+XG4gICAgICAgIDxkaXYgY2xhc3M9XCJjb2x1bW4gY29sLTMgY29sLWxnLTEyXCI+XG4gICAgICAgICAgICA8c2NyaXB0PlxuICAgICAgICAgICAgICAgICQuZ2V0KFwiaHR0cHM6Ly9oYWNrZXItbmV3cy5maXJlYmFzZWlvLmNvbS92MC9iZXN0c3Rvcmllcy5qc29uXCIsIGZ1bmN0aW9uKGRhdGEsIHN0YXR1cykge1xuICAgICAgICAgICAgICAgICAgICBmb3IoaT0wO2k8MztpKyspIHtcbiAgICAgICAgICAgICAgICAgICAgICAgIC8vIG9yZGVyIGlzIG5vdCBwcmVzZXJ2ZWRcbiAgICAgICAgICAgICAgICAgICAgICAgICQuZ2V0KFwiaHR0cHM6Ly9oYWNrZXItbmV3cy5maXJlYmFzZWlvLmNvbS92MC9pdGVtL1wiICsgZGF0YVtpXSArIFwiLmpzb25cIiwgZnVuY3Rpb24oZGF0YSwgc3RhdHVzKSB7XG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgdmFyIGxpID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnbGknKTtcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICBsaS5zZXRBdHRyaWJ1dGUoXCJjbGFzc1wiLCBcIm1lbnUtaXRlbVwiKVxuICAgICAgICAgICAgICAgICAgICAgICAgICAgIHZhciBsaW5rID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnYScpO1xuICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxpbmsuc2V0QXR0cmlidXRlKFwiaHJlZlwiLCBkYXRhLnVybCk7XG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgbGluay50ZXh0Q29udGVudCA9IGRhdGEudGl0bGVcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICBsaS5hcHBlbmRDaGlsZChsaW5rKVxuICAgICAgICAgICAgICAgICAgICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKFwiaG4tY29udGFpbmVyXCIpLmFwcGVuZENoaWxkKGxpKVxuICAgICAgICAgICAgICAgICAgICAgICAgfSlcbiAgICAgICAgICAgICAgICAgICAgfVxuICAgICAgICAgICAgICAgIH0pO1xuICAgICAgICAgICAgPC9zY3JpcHQ+XG4gICAgICAgICAgICA8c3R5bGU+XG4gICAgICAgICAgICAgICAgI2huLWNvbnRhaW5lciBhOnZpc2l0ZWQge1xuICAgICAgICAgICAgICAgICAgICBjb2xvcjogaHNsYSgwLCAwJSwgMTAwJSwgMC4wMSk7XG4gICAgICAgICAgICAgICAgICAgIGJhY2tncm91bmQ6IGhzbGEoMCwgMCUsIDEwMCUsIDAuMDEpO1xuICAgICAgICAgICAgICAgIH1cbiAgICAgICAgICAgIDwvc3R5bGU+XG4gICAgICAgICAgICA8dWwgaWQ9XCJobi1jb250YWluZXJcIiBjbGFzcz1cIm1lbnUgZmlyc3Qtcm93XCIgc3R5bGU9XCJ0ZXh0LWFsaWduOiBsZWZ0O1wiPlxuICAgICAgICAgICAgICAgIDxsaSBjbGFzcz1cImRpdmlkZXJcIiBkYXRhLWNvbnRlbnQ9XCJCZXN0IEhhY2tlcm5ld3NcIj48L2xpPlxuICAgICAgICAgICAgPC91bD5cbiAgICAgICAgPC9kaXY+XG4gICAgICAgIDxkaXYgY2xhc3M9XCJjb2x1bW4gY29sLTYgY29sLWxnLTEyXCI+XG4gICAgICAgICAgICA8c2NyaXB0PlxuICAgICAgICAgICAgICAgIGZ1bmN0aW9uIHNlYXJjaCgpIHtcbiAgICAgICAgICAgICAgICAgICAgbG9jYXRpb24uaHJlZj1cImh0dHBzOi8vZHVja2R1Y2tnby5jb20vP3E9XCIgKyBlbmNvZGVVUkkoZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoXCJzZWFyY2gtaW5wdXRcIikudmFsdWUpXG4gICAgICAgICAgICAgICAgfVxuICAgICAgICAgICAgPC9zY3JpcHQ+XG4gICAgICAgICAgICA8c3R5bGU+XG4gICAgICAgICAgICAgICAgLmhlcm8ge1xuICAgICAgICAgICAgICAgICAgICB0ZXh0LWFsaWduOiBjZW50ZXI7XG4gICAgICAgICAgICAgICAgfVxuICAgICAgICAgICAgPC9zdHlsZT5cbiAgICAgICAgICAgIDxkaXYgY2xhc3M9XCJoZXJvXCI+XG4gICAgICAgICAgICAgICAgPGRpdiBjbGFzPVwiaGVyby1ib2R5XCI+XG4gICAgICAgICAgICAgICAgICAgIDxoMT5XZWxjb21lIEhvbWU8L2gxPlxuICAgICAgICAgICAgICAgICAgICA8Zm9ybSBjbGFzcz1cImlucHV0LWdyb3VwIGlucHV0LWlubGluZVwiIG9uc3VibWl0PVwic2VhcmNoKClcIiBzdHlsZT1cIndpZHRoOiA4MCU7XCI+XG4gICAgICAgICAgICAgICAgICAgICAgICA8aW5wdXQgaWQ9XCJzZWFyY2gtaW5wdXRcIiBjbGFzcz1cImZvcm0taW5wdXRcIiB0eXBlPVwidGV4dFwiIHBsYWNlaG9sZGVyPVwiU2VhcmNoIHdpdGggRHVja0R1Y2tHb1wiPlxuICAgICAgICAgICAgICAgICAgICAgICAgPGJ1dHRvbiB0eXBlPVwic3VibWl0XCIgY2xhc3M9XCJidG4gYnRuLXByaW1hcnkgaW5wdXQtZ3JvdXAtYnRuXCI+PGkgY2xhc3M9XCJpY29uIGljb24tc2VhcmNoXCI+PC9pPjwvYnV0dG9uPlxuICAgICAgICAgICAgICAgICAgICA8L2Zvcm0+XG4gICAgICAgICAgICAgICAgPC9kaXY+XG4gICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgPC9kaXY+XG4gICAgICAgIDxkaXYgY2xhc3M9XCJjb2x1bW4gY29sLTMgY29sLWxnLTEyXCI+XG4gICAgICAgICAgICA8dWwgaWQ9XCJ3ZWF0aGVyLWNvbnRhaW5lclwiIGNsYXNzPVwibWVudSBmaXJzdC1yb3dcIj5cbiAgICAgICAgICAgICAgICA8IS0tPGxpIGNsYXNzPVwiZGl2aWRlclwiIGRhdGEtY29udGVudD1cIldlYXRoZXIgRm9yZWNhc3RcIj48L2xpPi0tPlxuICAgICAgICAgICAgICAgIDxsaSBjbGFzcz1cIm1lbnUtaXRlbVwiPlxuICAgICAgICAgICAgICAgICAgICA8IS0tIGh0dHBzOi8vd2VhdGhlcndpZGdldC5pby8gLS0+XG4gICAgICAgICAgICAgICAgICAgIDxhIGNsYXNzPVwid2VhdGhlcndpZGdldC1pb1wiIGhyZWY9XCJodHRwczovL2ZvcmVjYXN0Ny5jb20vZW4vNDBkNzFuNzRkMDEvbmV3LXlvcmsvXCIgZGF0YS1sYWJlbF8xPVwiTkVXIFlPUktcIiBkYXRhLWxhYmVsXzI9XCJXRUFUSEVSXCIgZGF0YS1mb250PVwiUm9ib3RvXCIgZGF0YS1kYXlzPVwiM1wiID5ORVcgWU9SSyBXRUFUSEVSPC9hPlxuICAgICAgICAgICAgICAgICAgICA8c2NyaXB0PlxuICAgICAgICAgICAgICAgICAgICAhZnVuY3Rpb24oZCxzLGlkKXt2YXIganMsZmpzPWQuZ2V0RWxlbWVudHNCeVRhZ05hbWUocylbMF07aWYoIWQuZ2V0RWxlbWVudEJ5SWQoaWQpKXtqcz1kLmNyZWF0ZUVsZW1lbnQocyk7anMuaWQ9aWQ7anMuc3JjPSdodHRwczovL3dlYXRoZXJ3aWRnZXQuaW8vanMvd2lkZ2V0Lm1pbi5qcyc7ZmpzLnBhcmVudE5vZGUuaW5zZXJ0QmVmb3JlKGpzLGZqcyk7fX0oZG9jdW1lbnQsJ3NjcmlwdCcsJ3dlYXRoZXJ3aWRnZXQtaW8tanMnKTtcbiAgICAgICAgICAgICAgICAgICAgPC9zY3JpcHQ+XG4gICAgICAgICAgICAgICAgPC9saT5cbiAgICAgICAgICAgIDwvdWw+XG4gICAgICAgIDwvZGl2PlxuICAgIDwvZGl2PlxuICAgIDxkaXYgY2xhc3M9XCJjb2x1bW5zXCI+XG4gICAgICAgIDxkaXYgY2xhc3M9XCJjb2x1bW4gY29sLTggY29sLWxnLTEyIGNvbC1teC1hdXRvXCI+XG4gICAgICAgICAgICA8bGluayByZWw9XCJzdHlsZXNoZWV0XCIgaHJlZj1cImh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9zaW1wbGVtZGUvbGF0ZXN0L3NpbXBsZW1kZS5taW4uY3NzXCI+XG4gICAgICAgICAgICA8c2NyaXB0IHNyYz1cImh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9zaW1wbGVtZGUvbGF0ZXN0L3NpbXBsZW1kZS5taW4uanNcIiBzeW5jPjwvc2NyaXB0PlxuICAgICAgICAgICAgPHRleHRhcmVhIGlkPVwibWFya2Rvd24tZWRpdG9yXCI+PC90ZXh0YXJlYT5cbiAgICAgICAgICAgIDxzdHlsZT5cbiAgICAgICAgICAgICAgICAuQ29kZU1pcnJvci1zY3JvbGwge1xuICAgICAgICAgICAgICAgICAgICBtaW4taGVpZ2h0OiA1MDBweDtcbiAgICAgICAgICAgICAgICB9XG4gICAgICAgICAgICA8L3N0eWxlPlxuICAgICAgICAgICAgPHNjcmlwdD5cbiAgICAgICAgICAgICAgICBmdW5jdGlvbiBsb2FkTURFKHJldHJpZXMpIHtcbiAgICAgICAgICAgICAgICAgICAgaWYgKHR5cGVvZiBTaW1wbGVNREUgIT09ICd1bmRlZmluZWQnKSB7XG4gICAgICAgICAgICAgICAgICAgICAgICBjb25zb2xlLmxvZyhcImxvYWRpbmcgbWRlIHdpdGggXCIgKyByZXRyaWVzICsgXCIgcmV0cmllcyBsZWZ0XCIpXG4gICAgICAgICAgICAgICAgICAgICAgICB2YXIgc2ltcGxlbWRlID0gbmV3IFNpbXBsZU1ERSh7XG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgYXV0b3NhdmU6IHtcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZW5hYmxlZDogdHJ1ZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdW5pcXVlSWQ6IFwiYmlnTURFXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGRlbGF5OiAxMDAwLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgIH0sXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgZWxlbWVudDogZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoXCJtYXJrZG93bi1lZGl0b3JcIilcbiAgICAgICAgICAgICAgICAgICAgICAgIH0pO1xuICAgICAgICAgICAgICAgICAgICB9IGVsc2UgaWYocmV0cmllcyA+IDApIHtcbiAgICAgICAgICAgICAgICAgICAgICAgIHNldFRpbWVvdXQobG9hZE1ERSwgMjAwLCByZXRyaWVzIC0xKVxuICAgICAgICAgICAgICAgICAgICB9IGVsc2Uge1xuICAgICAgICAgICAgICAgICAgICAgICAgY29uc29sZS5sb2coXCJGYWlsZWQgbG9hZGluZyBTaW1wbGVNREUsIGdpdmluZyB1cC5cIik7XG4gICAgICAgICAgICAgICAgICAgIH1cbiAgICAgICAgICAgICAgICB9XG4gICAgICAgICAgICAgICAgbG9hZE1ERSgxMDApXG4gICAgICAgICAgICA8L3NjcmlwdD5cbiAgICAgICAgPC9kaXY+XG4gICAgPC9kaXY+XG48L2Rpdj4ifQ==';
+var defaultValue=JSON.parse(window.atob(defaultStr)).code;
+var state="content"
+var editor = ace.edit("editor");
+editor.setTheme("ace/theme/monokai");
+editor.session.setMode("ace/mode/html");
+load();
+document.getElementById("vim-checkbox").checked = false;
+
+function errorReporter(err) {
+	console.log(err);
+	alert('An error occured. You might want to take a look at the dev-tools.')
+}
+function toggle(){
+	if (state == "content") {
+		document.getElementById("content-view").style.display = "none";
+		document.getElementById("change-view").style.display = "block";
+		editor.resize()
+		state="editor"
+	} else {
+		document.getElementById("content-view").style.display = "block";
+		document.getElementById("change-view").style.display = "none";
+		state="content"
+	}
+}
+function save() {
+	value=editor.getValue()
+	localforage.setItem("content", value).catch(errorReporter);
+	render(value)
+	toggle()
+}
+function load(){
+	localforage.getItem("content").then(function(value){
+		if (value == null) {
+			value=defaultValue;
+		}
+		render(value)
+		editor.session.setValue(value);
+	}).catch(errorReporter);
+}
+function cancel(){
+	if (confirm("Do you want to go back without saving and reset the the state before the editor was opened?")) {
+		load()
+		toggle()
+	}
+}
+function reset(){
+	if (confirm("Do you want to reset the content to the initial value and delete all customizations you made?")) {
+		localforage.removeItem("content").then(function(){
+			load()
+		}).catch(errorReporter);
+	}
+}
+function exportFile(){
+	container={}
+	container.code = editor.getValue()
+	var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(container));
+	var dlAnchorElem = document.getElementById('hiddenDownloadHelper');
+	dlAnchorElem.setAttribute("href",     dataStr     );
+	dlAnchorElem.setAttribute("download", "code-" + Date.now() + ".json");
+	dlAnchorElem.click();
+}
+function render(html){
+	// jquery executes all <script> tags accordingly
+	$("#content").html(html);
+}
+function toggleKeys() {
+	if (document.getElementById("vim-checkbox").checked) {
+		editor.setKeyboardHandler('ace/keyboard/vim');
+	} else {
+		editor.setKeyboardHandler('ace/keyboard/ace');
+	}
+	editor.focus();
+}
+	</script>
+	</body>
+</html>
