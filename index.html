@@ -33,7 +33,7 @@
 	</head>
 	<body>
 		<div id="content-view">
-			<button id="editor-button" class="btn btn-action s-circle" onclick="toggle()"><i class="icon icon-edit"></i></button>
+			<button id="editor-button" class="btn btn-action s-circle" onclick="return toggle()"><i class="icon icon-edit"></i></button>
 			<div id="content"></div>
 		</div>
 		<div id="change-view">
@@ -50,13 +50,13 @@
 						<i class="form-icon"></i> Vim Keys
 					</label>
 					<div class="btn-group btn-group-block">
-						<a href="#" class="btn" onclick="importFile()">Import</a>
-						<a href="#" class="btn" onclick="exportFile()">Export</a>
+						<a href="#" class="btn" onclick="return importFile()">Import</a>
+						<a href="#" class="btn" onclick="return exportFile()">Export</a>
 					</div>
-					<a href="#" class="btn btn-link" onclick="reset()">Reset</a>
+					<a href="#" class="btn btn-link" onclick="return reset()">Reset</a>
 					<div class="btn-group btn-group-block">
-						<a href="#" class="btn" onclick="cancel()">Cancel</a>
-						<a href="#" class="btn active" onclick="save()">Save</a>
+						<a href="#" class="btn" onclick="return cancel()">Cancel</a>
+						<a href="#" class="btn active" onclick="return save()">Save</a>
 					</div>
 				</section>
 			</header>
@@ -93,12 +93,14 @@ function toggle(){
 		document.getElementById("change-view").style.display = "none";
 		state="content"
 	}
+	return false;
 }
 function save() {
 	value=editor.getValue()
 	localforage.setItem("content", value).catch(errorReporter);
 	render(value)
 	toggle()
+	return false;
 }
 function load(){
 	localforage.getItem("content").then(function(value){
@@ -108,12 +110,14 @@ function load(){
 		render(value)
 		editor.session.setValue(value);
 	}).catch(errorReporter);
+	return false;
 }
 function cancel(){
 	if (confirm("Do you want to go back without saving and reset the the state before the editor was opened?")) {
 		load()
 		toggle()
 	}
+	return false;
 }
 function reset(){
 	if (confirm("Do you want to reset the content to the initial value and delete all customizations you made?")) {
@@ -121,6 +125,7 @@ function reset(){
 			load()
 		}).catch(errorReporter);
 	}
+	return false;
 }
 function exportFile(){
 	container={}
