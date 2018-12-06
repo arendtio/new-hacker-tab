@@ -74,7 +74,10 @@ var defaultValue=JSON.parse(window.atob(defaultStr)).code;
 var state="content"
 var editor = ace.edit("editor");
 editor.setTheme("ace/theme/monokai");
-editor.session.setMode("ace/mode/html");
+editor.session.setOptions({
+	mode: "ace/mode/html",
+	useSoftTabs: false,
+});
 load();
 document.getElementById("vim-checkbox").checked = false;
 
@@ -142,6 +145,13 @@ function render(html){
 }
 function toggleKeys() {
 	if (document.getElementById("vim-checkbox").checked) {
+		ace.config.loadModule("ace/keybinding/vim", function(m) {
+			var VimApi = ace.require("ace/keyboard/vim").CodeMirror.Vim
+			VimApi.defineEx("write", "w", function(cm, input) {
+				//cm.ace.execCommand("save");
+				save();
+			});
+		});
 		editor.setKeyboardHandler('ace/keyboard/vim');
 	} else {
 		editor.setKeyboardHandler('ace/keyboard/ace');
