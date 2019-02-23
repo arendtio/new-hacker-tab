@@ -30,6 +30,13 @@
 	padding: 10px;
 }
 		</style>
+	<script>
+		if ('serviceWorker' in navigator) {
+			window.addEventListener('load', function() {
+				navigator.serviceWorker.register('/serviceworker.js');
+			});
+		}
+	</script>
 	</head>
 	<body>
 		<div id="content-view">
