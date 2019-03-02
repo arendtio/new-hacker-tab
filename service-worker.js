@@ -1,12 +1,62 @@
 var CACHE_NAME = 'new-hacker-tab-v1';
 
-// TODO:
-// currently we use cacheFirst until it is outdated and switch to Network first then
-// Three stages might be better for the user experience:
-// - CacheFirst
-// - after X minutes: StaleWhileRevalidate
-// - after Y minutes: NetworkFirst
-// ------------------------------
+/****
+ * Three States
+ * - fresh: a few minutes old (CacheFirst)
+ * - old: old enough te be refreshed (StaleWhileRevalidate)
+ * - outdated: very old, wait until new data has been fetched (NetworkFirst)
+ */
+self.addEventListener('fetch', function(event) {
+	const secondsUntilOld = 60*60*1; // one hour
+	const secondsUntilOutdated = 60*60*6; // 6 hours
+
+	//console.log("fetch event for", event.request.url)
+	event.respondWith(
+		// get the matching cache entry
+		caches.match(event.request).then(function(cacheResponse) {
+			// detect if the cache entry is fresh, old, outdated or undefined (does not include a date header)
+			const cacheState = detectCacheState(cacheResponse, secondsUntilOld, secondsUntilOutdated);
+
+			// Depending on the state we proceed differently:
+			// if cacheState fresh -> return cache
+			// if cacheState old -> start network, updateCache + return cache
+			// if cacheState outdated -> start network, updateCache + return network first or cache as fallback (if it exists)
+			// if cacheState undefined -> start network, updateCache + return network
+			if (cacheState === "fresh") {
+				// the cache entry is "fresh", so we jsut return it
+				return cacheResponse;
+			} else if (cacheState === "old") {
+				// the cache entry is "old", so we return the cache entry and refresh it via the network in the background
+				fetchToCache(event.request, CACHE_NAME).catch(() => undefined);
+				return cacheResponse;
+			} else if (cacheState === "outdated") {
+				// the cache entry is "outdated", so we try to get a newer version via the network
+				// return the network reponse if successful, otherwise the old cache, if it exists
+				return fetchToCache(event.request, CACHE_NAME).then(function(networkResponse){
+					if(networkResponse) {
+						//console.log("using the networkResponse", networkResponse.url)
+						return networkResponse
+					} else {
+						// use the old cache response if the network failed and a cache response exists
+						if (cacheResponse) {
+							//console.log("falling back to outdated cache response", cacheResponse.url)
+							return cacheResponse;
+						} else {
+							//console.log("failed response from network and cache")
+							return networkResponse;
+						}
+					}
+				}).catch(() => {
+					// e.g. chrome, offline, disabled cache (/outdated cache)
+					//console.log("CATCH to cache response", event.request.url)
+					cacheResponse
+				});
+			} else {
+				return fetchToCache(event.request, CACHE_NAME);
+			}
+		})
+	);
+});
 
 // Extract date header from response
 // returns
@@ -21,64 +71,48 @@ function getResponseDate(response) {
 	}
 }
 
-self.addEventListener('fetch', function(event) {
-	//console.log("fetch event for", event.request.url)
-	event.respondWith(
-		caches.match(event.request).then(function(cacheResponse) {
-			// response is undefined if the cache did not match
+function detectCacheState(cacheResponse, oldDuration, outdatedDuration) {
+	if (cacheResponse) {
+		const now = Date.now();
+		const cacheResponseDate = getResponseDate(cacheResponse);
 
-			let outdated = true;
-
-			// Cache hit
-			if (cacheResponse) {
-				// check if the cache entry is fresh
-				const now = Date.now();
-				const cacheResponseDate = getResponseDate(cacheResponse);
-				let ageInSeconds = undefined;
-				if (isNaN(cacheResponseDate)) {
-					// we treat responses which do not contain a date header as fresh
-					outdated = false
-				} else {
-					ageInSeconds = (now - cacheResponseDate)/1000
-					//console.log("Age", ageInSeconds)
-					outdated = (ageInSeconds > 60*60) // one hour
-				}
-				if (!outdated) {
-					//console.log("cache hit fresh", ageInSeconds)
-					return cacheResponse;
-				}
+		if (isNaN(cacheResponseDate)) {
+			// we treat responses which do not contain a date header as fresh
+			//console.log("cache hit without date (fresh)")
+			return "fresh";
+		} else {
+			const ageInSeconds = (now - cacheResponseDate)/1000
+			if (ageInSeconds > outdatedDuration) {
 				//console.log("cache hit outdated", ageInSeconds)
+				return "outdated";
+			} else if (ageInSeconds > oldDuration) {
+				//console.log("cache hit old", ageInSeconds)
+				return "old"
+			} else {
+				//console.log("cache hit fresh", ageInSeconds)
+				return "fresh";
 			}
+		}
+	}
+	//console.log("cache MISS");
+	return undefined;
+}
 
-			// fetch from network
-			return fetch(event.request).then(function(networkResponse) {
-				//console.log("got response for", networkResponse.url)
+function fetchToCache(request, cacheName) {
+	return fetch(request).then(function(networkResponse) {
+		//console.log("got response for", networkResponse.url)
 
-				// Check if we received a valid response
-				//if(!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-				//we want to allow opaque responses
-				if(!networkResponse) {
-					// use the old cache response if the network failed and a cache response exists
-					if (cacheResponse) {
-						//console.log("falling back to cache response", networkResponse.url)
-						return cacheResponse;
-					} else {
-						//console.log("failed response skipping cache", networkResponse.url)
-						return networkResponse;
-					}
-				}
+		// Check if we received a valid response
+		// if(!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+		// we want to allow opaque responses (status === 0)
+		if(networkResponse) {
+			// save to cache in the background
+			saveResponseToCache(cacheName, request, networkResponse);
+		}
 
-				saveResponseToCache(CACHE_NAME, event.request, networkResponse);
-
-				return networkResponse;
-			}).catch(function(){
-				// e.g. chrome, offline, disabled cache (/outdated cache)
-				//console.log("CATCH to cache response", event.request.url)
-				return cacheResponse
-			});
-		})
-	);
-});
+		return networkResponse;
+	})
+}
 
 function saveResponseToCache(name, request, response) {
 	// IMPORTANT: Clone the response. A response is a stream
