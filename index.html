@@ -50,7 +50,7 @@
 						<i class="form-icon"></i> Vim Keys
 					</label>
 					<div class="btn-group btn-group-block">
-						<a href="#" class="btn" onclick="return importFile()">Import</a>
+						<a href="#" class="btn" onclick="return toggleImportModal()">Import</a>
 						<a href="#" class="btn" onclick="return exportFile()">Export</a>
 					</div>
 					<a href="#" class="btn btn-link" onclick="return reset()">Reset</a>
@@ -61,6 +61,23 @@
 				</section>
 			</header>
 			<div id="editor"></div>
+			<div id="importModal" class="modal">
+				<a href="#close" class="modal-overlay" aria-label="Close" onclick="return toggleImportModal()"></a>
+				<div class="modal-container">
+					<div class="modal-header">
+						<a href="#close" class="btn btn-clear float-right" aria-label="Close" onclick="return toggleImportModal()"></a>
+						<div class="modal-title h5">Import</div>
+					</div>
+					<div class="modal-body">
+						<div class="content">
+							<form name="importForm">
+								<input type="file" id="importInput" onchange="importFile()"/>
+							</form>
+							<br/>
+						</div>
+					</div>
+				</div>
+			</div>
 		</div>
 		<a id="hiddenDownloadHelper" style="display:none;"></a>
 
@@ -96,6 +113,14 @@ function toggle(){
 		document.getElementById("content-view").style.display = "block";
 		document.getElementById("change-view").style.display = "none";
 		state="content"
+	}
+	return false;
+}
+function toggleImportModal() {
+	if (document.getElementById("importModal").className.match(/ active/) === null) {
+		document.getElementById("importModal").className+=" active";
+	} else {
+		document.getElementById("importModal").className=document.getElementById("importModal").className.replace(" active", "");
 	}
 	return false;
 }
@@ -139,6 +164,24 @@ function exportFile(){
 	dlAnchorElem.setAttribute("href",     dataStr     );
 	dlAnchorElem.setAttribute("download", "code-" + Date.now() + ".json");
 	dlAnchorElem.click();
+}
+function importFile(){
+	if (document.getElementById("importInput").files.length === 0) {
+		return;
+	}
+	importer = new FileReader()
+	importer.onload = function(event) {
+		var obj = JSON.parse(event.target.result)
+		if (obj && obj.code) {
+			editor.session.setValue(obj.code);
+			alert("The content of the file was loaded into the editor. Save it if you want to use it.");
+			toggleImportModal();
+		} else {
+			alert("Import failed");
+		}
+	}
+	var oFile = document.getElementById("importInput").files[0];
+	importer.readAsText(oFile);
 }
 function render(html){
 	// jquery executes all <script> tags accordingly
