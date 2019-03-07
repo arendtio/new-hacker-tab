@@ -7,10 +7,12 @@ var CACHE_NAME = 'new-hacker-tab-v1';
  * - outdated: very old, wait until new data has been fetched (NetworkFirst)
  */
 self.addEventListener('fetch', function(event) {
-	const secondsUntilOld = 60*60*1; // one hour
-	const secondsUntilOutdated = 60*60*6; // 6 hours
+	//const secondsUntilOld = 60*60*1; // one hour
+	//const secondsUntilOutdated = 60*60*6; // 6 hours
+	const secondsUntilOld = 60*1; // one minute
+	const secondsUntilOutdated = 60*6; // 6 minutes
 
-	//console.log("fetch event for", event.request.url)
+	console.log("fetch event for", event.request.url)
 	event.respondWith(
 		// get the matching cache entry
 		caches.match(event.request).then(function(cacheResponse) {
@@ -34,21 +36,21 @@ self.addEventListener('fetch', function(event) {
 				// return the network reponse if successful, otherwise the old cache, if it exists
 				return fetchToCache(event.request, CACHE_NAME).then(function(networkResponse){
 					if(networkResponse) {
-						//console.log("using the networkResponse", networkResponse.url)
+						console.log("using the networkResponse", networkResponse.url)
 						return networkResponse
 					} else {
 						// use the old cache response if the network failed and a cache response exists
 						if (cacheResponse) {
-							//console.log("falling back to outdated cache response", cacheResponse.url)
+							console.log("falling back to outdated cache response", cacheResponse.url)
 							return cacheResponse;
 						} else {
-							//console.log("failed response from network and cache")
+							console.log("failed response from network and cache")
 							return networkResponse;
 						}
 					}
 				}).catch(() => {
 					// e.g. chrome, offline, disabled cache (/outdated cache)
-					//console.log("CATCH to cache response", event.request.url)
+					console.log("CATCH to cache response", event.request.url)
 					cacheResponse
 				});
 			} else {
@@ -78,29 +80,29 @@ function detectCacheState(cacheResponse, oldDuration, outdatedDuration) {
 
 		if (isNaN(cacheResponseDate)) {
 			// we treat responses which do not contain a date header as fresh
-			//console.log("cache hit without date (fresh)")
+			console.log("cache hit without date (fresh)")
 			return "fresh";
 		} else {
 			const ageInSeconds = (now - cacheResponseDate)/1000
 			if (ageInSeconds > outdatedDuration) {
-				//console.log("cache hit outdated", ageInSeconds)
+				console.log("cache hit outdated", ageInSeconds)
 				return "outdated";
 			} else if (ageInSeconds > oldDuration) {
-				//console.log("cache hit old", ageInSeconds)
+				console.log("cache hit old", ageInSeconds)
 				return "old"
 			} else {
-				//console.log("cache hit fresh", ageInSeconds)
+				console.log("cache hit fresh", ageInSeconds)
 				return "fresh";
 			}
 		}
 	}
-	//console.log("cache MISS");
+	console.log("cache MISS");
 	return undefined;
 }
 
 function fetchToCache(request, cacheName) {
 	return fetch(request).then(function(networkResponse) {
-		//console.log("got response for", networkResponse.url)
+		console.log("got response for", networkResponse.url)
 
 		// Check if we received a valid response
 		// if(!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
