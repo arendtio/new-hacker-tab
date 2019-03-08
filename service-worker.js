@@ -88,9 +88,9 @@ async function detectCacheState(url, cacheResponse, oldDuration, outdatedDuratio
 		//console.log("cacheResponseDate", cacheResponseDate, url)
 
 		if (isNaN(cacheResponseDate)) {
-			// we treat responses which do not contain a date header as fresh
-			console.log("cache hit without date (fresh)")
-			return "fresh";
+			// we treat responses which do not contain a date header as old (background update while using cache)
+			console.log("cache hit WITHOUT date (old); should NOT happen anymore.")
+			return "old";
 		} else {
 			const ageInSeconds = (now - cacheResponseDate)/1000
 			if (ageInSeconds > outdatedDuration) {
